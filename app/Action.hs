@@ -8,18 +8,15 @@ import Conduit (
     mapC,
     runConduitRes,
     sourceIOHandle,
-    takeC,
     (.|),
  )
 import Config (EventActionConfig (..), RegexActionConfig (..), StaleFileConfig (..))
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.STM.TBQueue (TBQueue, writeTBQueue)
-import Data.Conduit.Combinators (sinkList)
 import Data.Conduit.TQueue (sinkTBQueue)
 import Data.Map qualified as Map
 import Data.Time (UTCTime)
 import Data.Time.Clock (addUTCTime, getCurrentTime)
-import Fmt ((+||), (||+))
 import Predicate (
     EventType (Create, Modify, ModifyAttribute),
     anyEventMatch,
@@ -30,9 +27,6 @@ import Relude.Extra.Map (insert, keys, lookupDefault)
 import System.Directory (getFileSize)
 import System.FSNotify (
     Event (eventPath, eventTime),
-    StopListening,
-    WatchManager,
-    watchDir,
  )
 import System.FSNotify qualified as FS
 import System.IO (SeekMode (..), hSeek, openBinaryFile)

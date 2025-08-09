@@ -21,7 +21,7 @@ import Config (
     directories,
     parseConfigFromFile,
  )
-import Control.Concurrent (forkIO)
+import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async (withAsync)
 import Control.Concurrent.STM.TBQueue (newTBQueue, readTBQueue)
 import Control.Exception (handle)
@@ -39,12 +39,11 @@ import Options.Applicative (
     progDesc,
     strArgument,
  )
-import Predicate (getEventType)
+import Predicate (EventType (..), getEventType)
 import Relude.Extra.Map (lookupDefault)
 import System.Environment (getEnvironment)
-import System.FSNotify (Event (eventPath, eventTime), StopListening, watchDir, withManager)
+import System.FSNotify (Event (eventPath, eventTime), watchDir, withManager)
 import System.FSNotify qualified as FS
-import System.IO (getChar)
 import System.Process (
     CreateProcess (env, std_err, std_out),
     StdStream (NoStream),
@@ -52,7 +51,6 @@ import System.Process (
     shell,
     waitForProcess,
  )
-import Toml (Result (..))
 
 fireAndForget :: [(String, String)] -> String -> IO ()
 fireAndForget callBackEnvironment cmd = do
@@ -92,8 +90,16 @@ handleEvent (FileEvent config inotifyEvent) = fireAndForget environment config.c
         , ("FILE", eventPath inotifyEvent)
         , ("DIRECTORY", config.directory)
         , ("TIMESTAMP", show (eventTime inotifyEvent))
-        , ("KIND", show (getEventType inotifyEvent))
+        , ("KIND", showEvent (getEventType inotifyEvent))
         ]
+    showEvent :: EventType -> String
+    showEvent Create = "create"
+    showEvent Modify = "modify"
+    showEvent DeleteDirectory = "delete_directory"
+    showEvent UnknownEvent = "unknown"
+    showEvent ModifyAttribute = "attribute"
+    showEvent Remove = "remove"
+    showEvent Close = "close"
 handleEvent (StaleEvent config timestamp fp) = fireAndForget environment config.cmd
   where
     environment :: [(String, String)]
@@ -130,7 +136,8 @@ startSidecar config = do
             mapM_ (\dir -> watchDir mgr dir (const True) (route actions dir)) (directories config)
             unless (null config.staleFileActions) $ do
                 withAsyncs (map (staleFileChecker eventChannel lastSeenMap) config.staleFileActions) $ do
-                    void getChar
+                    forever (threadDelay maxBound)
+            forever (threadDelay maxBound)
 
 -- CLI Options data type
 data CliOptions = CliOptions
@@ -151,7 +158,7 @@ opts =
         (cliOptions <**> helper)
         ( fullDesc
             <> progDesc "File system watcher with configurable actions designed for monitoring long-running processes."
-            <> header "sidecar - a file system monitoring tool"
+            <> header "sidecar - a process monitoring tool"
         )
 
 -- Updated main function
@@ -160,8 +167,5 @@ main = do
     options <- execParser opts
     configResult <- parseConfigFromFile (options.configFile)
     case configResult of
-        Success warns config -> do
-            -- Override queue length from CLI if different from default
-            putTextLn . unlines . map toText $ warns
-            startSidecar config
-        Failure errs -> putTextLn . unlines . map toText $ errs
+        Right config -> startSidecar config
+        Left err -> putTextLn err
