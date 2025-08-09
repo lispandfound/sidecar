@@ -42,7 +42,7 @@ A hypothetical slurm script that runs sidecar alongside a process would be somet
 #+end_src
 
 *** Tuning for Performance
-Sidecar events are handled asynchronously using threads spawned in the [[https://well-typed.com/blog/2011/05/parallel-haskell-digest-2/][GHC Runtime system (RTS)]]. Haskell's multithreading model maps many lightweight green threads to few system threads. This means, for example, that sidecar can handle potentially thousands of watchers concurrently and minimal OS thread overhead. It also means you can further tune the performance of the RTS using GHC's [[https://downloads.haskell.org/ghc/9.12.1/docs/users_guide/runtime_control.html#rts-opts-cmdline][RTS options]]. To limit the number of OS threads to just one, you can use =sidecar config.toml +RTS -N1=. You can see an extensive list of runtime options with =sidecar config.toml +RTS "-?"=.
+Sidecar events are handled asynchronously using threads spawned in the [[https://well-typed.com/blog/2011/05/parallel-haskell-digest-2/][GHC Runtime system (RTS)]]. Haskell's multithreading model maps many lightweight green threads to a few system threads. Sidecar can handle thousands of watchers concurrently with minimal OS thread overhead. It also means you can further tune the performance of the RTS using GHC's [[https://downloads.haskell.org/ghc/9.12.1/docs/users_guide/runtime_control.html#rts-opts-cmdline][RTS options]]. To limit the number of OS threads to just one, you can use =sidecar config.toml +RTS -N1=. You can see an extensive list of runtime options with =sidecar config.toml +RTS "-?"=.
 
 ** Configuration
 Configuration is achieved with a pretty self-explanatory toml configuration format.
