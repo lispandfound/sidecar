@@ -1,4 +1,4 @@
-* Sidecar - A Process Monitoring Tool
+* Sidecar - A Process Monitoring Tool for HPC
 Sidecar is designed as low-resource CLI tool that runs alongside a long-running HPC process and will execute actions when specific events occur. The intended use-case is for alerting HPC users when an HPC job hangs, throws warnings, or is otherwise functioning incorrectly.
 
 You can currently trigger events when:
