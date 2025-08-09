@@ -1,10 +1,10 @@
 * Sidecar - A Process Monitoring Tool for HPC
-Sidecar is designed as low-resource CLI tool that runs alongside a long-running HPC process and will execute actions when specific events occur. The intended use-case is for alerting HPC users when an HPC job hangs, throws warnings, or is otherwise functioning incorrectly.
+Sidecar is designed as low-resource CLI tool that runs alongside a long-running HPC process and will execute actions when specific events occur. The intended use case is for alerting HPC users when an HPC job hangs, throws warnings, or is otherwise functioning incorrectly.
 
 You can currently trigger events when:
 
 1. A file has a line matching a given regex.
-2. A file hasn't been written to in a file. Use this on log files to detect hung processes.
+2. A file hasn't been written to in a while. Use this on log files to detect hung processes.
 3. A file is created. This can be useful to detect the existence of output files you anticipate being created.
 
 Many files can be watched, and are all managed asynchronously using lightweight threads and kernel inotify events.
@@ -40,6 +40,9 @@ A hypothetical slurm script that runs sidecar alongside a process would be somet
   nice sidecar config.toml &
   super_duper_calculations
 #+end_src
+
+*** Tuning for Performance
+Sidecar events are handled asynchronously using threads spawned in the [[https://well-typed.com/blog/2011/05/parallel-haskell-digest-2/][GHC Runtime system (RTS)]]. Haskell's multithreading model maps many lightweight green threads to few system threads. This means, for example, that sidecar can handle potentially thousands of watchers concurrently and minimal OS thread overhead. It also means you can further tune the performance of the RTS using GHC's [[https://downloads.haskell.org/ghc/9.12.1/docs/users_guide/runtime_control.html#rts-opts-cmdline][RTS options]]. To limit the number of OS threads to just one, you can use =sidecar config.toml +RTS -N1=. You can see an extensive list of runtime options with =sidecar config.toml +RTS "-?"=.
 
 ** Configuration
 Configuration is achieved with a pretty self-explanatory toml configuration format.
