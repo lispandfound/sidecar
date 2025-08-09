@@ -58,7 +58,9 @@ Configuration is achieved with a pretty self-explanatory toml configuration form
   name = "error_detector" # Name of action
   cmd = "echo $MATCH >> matched.err" # command to execute
   # Commands inherit the environment of the sidecar process (i.e. all
-  # the SLURM* environment variables, if they are present). In addition, the following environment variables are always set for commands:
+  # the SLURM* environment variables, if they are present). In addition,
+  # the following environment variables are always set for commands:
+  #
   # NAME - The name of the event that was triggered (e.g. error_detector in the example above).
   # FILE - The filepath of the file that triggered the event.
   # DIRECTORY - The directory of the event (e.g. "." in the example above).
@@ -88,9 +90,12 @@ Configuration is achieved with a pretty self-explanatory toml configuration form
   [[file_event_actions]] # actions that trigger when files are created or modified.
   directory = "."
   filepath_regex = ".*.out"
-  # file actions that will trigger this event
-  # types are: create, modify, attribute (modification), remove, close, unknown, and delete_directory
+  # file actions that will trigger this event types are: create, modify,
+  # attribute (modification), remove, close, unknown, and
+  # delete_directory.
+  #
   # event_types = ["create", "modify", "attribute", "remove", "close", "unknown", "delete_directory"]
+  #
   event_types = ["create", "modify"]
   name = "output_watcher"
   command = "echo $FILE >> new_files"
