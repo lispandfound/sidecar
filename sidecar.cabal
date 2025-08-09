@@ -73,7 +73,7 @@ executable sidecar
     default-extensions: OverloadedStrings DeriveGeneric NoFieldSelectors DuplicateRecordFields OverloadedRecordDot OverloadedLabels NumericUnderscores DerivingVia
 
     -- Other library packages from which modules are imported.
-    build-depends:    base ^>=4.20.1.0, relude, conduit, stm, optparse-applicative, fsnotify, regex-tdfa, stm-conduit, directory, async, containers, time, fmt, process, toml-parser
+    build-depends:    base ^>=4.20.1.0, relude, conduit, stm, optparse-applicative, fsnotify, regex-tdfa, stm-conduit, directory, async, containers, time, fmt, process, htoml-megaparsec, megaparsec, vector
 
     -- Directories containing source files.
     hs-source-dirs:   app
