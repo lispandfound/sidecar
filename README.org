@@ -1,0 +1,108 @@
+* Sidecar - A Process Monitoring Tool
+Sidecar is designed as low-resource CLI tool that runs alongside a long-running HPC process and will execute actions when specific events occur. The intended use-case is for alerting HPC users when an HPC job hangs, throws warnings, or is otherwise functioning incorrectly.
+
+You can currently trigger events when:
+
+1. A file has a line matching a given regex.
+2. A file hasn't been written to in a file. Use this on log files to detect hung processes.
+3. A file is created. This can be useful to detect the existence of output files you anticipate being created.
+
+Many files can be watched, and are all managed asynchronously using lightweight threads and kernel inotify events.
+
+** Installation
+Installation happens in three steps:
+
+1. Install [[https://www.haskell.org/ghcup/][ghcup]] and set-up the haskell toolchain with =ghcup install ghc 9.10.2= and =ghcup install cabal latest=.
+2. Clone this repository.
+3. From the root of the repository: =cabal install=.
+4. The =sidecar= executable is now available at =~/.local/bin/sidecar=.
+
+- Note :: This executable has very minimal dependencies that mean it should work in any HPC environment without the need for externally loaded modules.
+** Usage
+Usage is pretty simple! All configuration is made within a =config.toml=. So once written, it is as simple as =sidecar config.toml=. From here, you can either:
+
+1. Run sidecar independently of the HPC job.
+2. Run sidecar alongside the HPC job by including it with the slurm script. It is recommended you =nice= the process so that the main HPC job gets CPU priority to avoid monitoring getting in the way of job completion.
+
+A hypothetical slurm script that runs sidecar alongside a process would be something like:
+
+#+begin_src bash
+  #!/bin/bash
+  #SBATCH --job-name=test
+  #SBATCH --account=account_name
+  #SBATCH --partition=partition_name
+  #SBATCH --nodes=1
+  #SBATCH --ntasks-per-node=1
+  #SBATCH --cpus-per-task=4
+  #SBATCH --time=00:00:30
+  export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
+  cd $WORK_DIR
+  nice sidecar config.toml &
+  super_duper_calculations
+#+end_src
+
+** Configuration
+Configuration is achieved with a pretty self-explanatory toml configuration format.
+#+begin_src toml
+  # Event queue length
+  # Long = Handles a larger back log before hanging event threads.
+  # Better event throughput. Higher memory usage.
+  # Short = Handles a smaller back log before hanging event threads.
+  # Worse event throughput. Lower memory usage.
+  queue_length = 100
+
+  [[regex_actions]] # actions that trigger with file content regex matches
+  directory = "." # directory to watch relative to sidecar process CWD
+  line_regex = "ERROR.*" # Regex in the file to match
+  filepath_regex = ".*.log" # Filepaths to match
+  name = "error_detector" # Name of action
+  cmd = "echo $MATCH >> matched.err" # command to execute
+  # Commands inherit the environment of the sidecar process (i.e. all
+  # the SLURM* environment variables, if they are present). In addition, the following environment variables are always set for commands:
+  # NAME - The name of the event that was triggered (e.g. error_detector in the example above).
+  # FILE - The filepath of the file that triggered the event.
+  # DIRECTORY - The directory of the event (e.g. "." in the example above).
+  #
+  # The different event types have their own environment they add on
+  # top. For regex actions, there is a MATCH variable that has the line
+  # that matched this regex.
+
+  [[regex_actions]]
+  directory = "."
+  line_regex = "WARN.*"
+  filepath_regex = ".*.log"
+  name = "warning_detector"
+  cmd = "echo $MATCH >> matched.warn"
+
+  [[stale_file_actions]] # actions that trigger when files become stale.
+  directory = "."
+  filepath_regex = ".*.tmp"
+  timeout = 3600.0 # 3600s = 1h, timeout for when files are considered stale.
+  # NOTE: timeout resolution is at most one minute, so very short
+  # timeouts will not be caught correctly.
+  name = "temp_warning"
+  cmd = "echo $FILE >> stale"
+  # The stale file action has the TIMEOUT environment variable that
+  # contains the event timeout in seconds (3600s in this case).
+
+  [[file_event_actions]] # actions that trigger when files are created or modified.
+  directory = "."
+  filepath_regex = ".*.out"
+  # file actions that will trigger this event
+  # types are: create, modify, attribute (modification), remove, close, unknown, and delete_directory
+  # event_types = ["create", "modify", "attribute", "remove", "close", "unknown", "delete_directory"]
+  event_types = ["create", "modify"]
+  name = "output_watcher"
+  command = "echo $FILE >> new_files"
+  # File event actions set the KIND environment variable.
+  # This variable has the type of event that triggered the action. The
+  # names for these are identical to the allowed names for the
+  # event_types parameter.
+
+  [[file_event_actions]]
+  directory = "."
+  filepath_regex = ".*.rs"
+  event_types = ["modify", "remove"]
+  name = "rust_watcher"
+  command = "echo $FILE >> rust_files"
+#+end_src
